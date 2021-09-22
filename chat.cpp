@@ -1,9 +1,9 @@
 /*******************************************
-* Group Name  : XXXXXX
+* Group Name  : Header
 
-* Member1 Name: XXXXXX
-* Member1 SIS ID: XXXXXX
-* Member1 Login ID: XXXXXX
+* Member1 Name: Ian Taylor
+* Member1 SIS ID: 831856215
+* Member1 Login ID: it
 
 * Member2 Name: Zach Walsh
 * Member2 SIS ID: 831955300
