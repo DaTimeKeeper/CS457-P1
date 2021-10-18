@@ -24,25 +24,26 @@ int setup_sock_fd(struct addrinfo *server_info);
 
 using namespace std;
 
+bool isNotIP(const char* ip){
+  for(size_t i=0;i< strlen(ip);i++){
+    if(isdigit(ip[i])||ip[i]=='.'){
+    }else{
+      return true;
+    }
+  }
+  return false;
+}
 int main(int argc, char* argv[]){
   bool server=false;
   int opt;
   if(argc==1){
     server=true;
   }else if(argc ==2){
-    if(strcmp(argv[1],"-h")){
-      //Display help
-      printf("Help\n");
-      return 0;
-    }else{
-      printf("Bad Arg Help\n");
-      return 1;
-    }
+    cout<<"To use client: -p {portNumber} -s {serverIP}\n"<<"To use Server: no args\n"<<"Use server first\n";
+    return 0;
   }else if(argc != 5){
-    printf("Bad Arg\n");
+    printf("Bad number of Argumnets\n");
     return 1;
-  }else{
-    printf("Client\n");
   }
 
 if(server){//Server code
@@ -87,26 +88,37 @@ if(server){//Server code
       perror("accept");
   }
   printf("Found a friend! You receive first.\n");
+
+
+
+
   //Loop and variables to receive and send communications
   int received, sent = 1;
-  char inc_message[140];
-  char serv_message[10];
+  char inc_message[4096];
+  bool rec=true;
   while(true) {  
     //Block until message is recv'd
-    while(true) {
+    while(rec) {
       memset(&inc_message, 0, sizeof inc_message);
-      received = recv(client_fd, inc_message, sizeof inc_message, 0);
+      received = recv(client_fd, inc_message, 4096, 0);
       if(received > 0) {
-        printf("Friend: %s", inc_message);
-        break;
+        cout<<"Friend: "<<string(inc_message,0,received)<<endl;
+        rec=false;
       }
     }
     //Block for server input and then send message
     printf("You: ");
-    cin.getline(serv_message, 10);
-    sent = send(client_fd, serv_message, sizeof serv_message, 0);
-    if(sent == 0) {
-      printf("Server: message sent is too small.");
+    string buffer;
+    getline(cin,buffer);
+    if(buffer.length()>140){
+      printf("Error: Input too long.\n");
+    }else{
+      sent = send(client_fd, buffer.c_str(), buffer.size()+1, 0);
+      if(sent == 0) {
+        printf("Server: message sent is too small.\n");
+      }else{
+        rec=true;
+      }
     }
   }
   
@@ -114,16 +126,76 @@ if(server){//Server code
 }
 
 else{//Client code
+const char* server_addr;
+const char* port;
   while((opt = getopt(argc,argv,"p:s:"))!= -1){
     switch (opt) {
       case 'p':
         //Set port
-        printf("set Port\n");
+        port=optarg;
+        char* t;
+        strtol(port,&t,10);
+        if(*t){
+          printf("Error: Port is not a number\n");
+          return 1;
+        }
         break;
       case 's':
         //set Server IP
-        printf("set IP\n");
+        server_addr=optarg;
+        if(isNotIP(server_addr)){
+          printf("Error: Server IP is not an IP\n");
+          return 1;
+        }
         break;
+    }
+  }
+  struct addrinfo hints, *res;
+  int sockfd;
+  printf("Connecting to server... ");
+  memset(&hints, 0, sizeof hints);
+  hints.ai_family=AF_UNSPEC;
+  hints.ai_socktype = SOCK_STREAM;
+  getaddrinfo(server_addr, port, &hints, &res);
+  if((sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol))){
+  }else{
+    //TODO unable to connect to socket
+  }
+  if(connect(sockfd, res->ai_addr ,res->ai_addrlen)!=-1){
+
+  }else{
+    //TODO return error
+  }
+  printf("Connected!\n");
+  printf("Connected to a friend! You send first.\n");
+
+
+
+
+  while(true){
+    char inc_message[4096];
+    bool receiving = false;
+    string buffer;
+    printf("You: ");
+    getline(cin,buffer);
+    if(buffer.length()>140){
+      printf("Error: Input too long.\n");
+    }else{
+      receiving=true;
+      int sent=send(sockfd,buffer.c_str(), buffer.size()+1, 0);
+      if(sent<0){
+        printf("Client: message sent is too small.\n");
+      }
+      
+    }
+    //TODO BLOCK WAIT FOR RECIVE
+    while(receiving) {
+      memset(&inc_message, 0, sizeof inc_message);
+      int received = recv(sockfd, inc_message, sizeof inc_message, 0);
+      if(received > 0) {
+        cout<<"Friend: "<<string(inc_message, 0, received)<<endl;
+        receiving=false;
+      }
     }
   }
 }
